@@ -47,3 +47,13 @@ config = {
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }
+
+# Configuración de la base de datos para compatibilidad con código existente
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'admin',
+    'database': 'expoferia_db',
+    'pool_name': 'expoferia_pool',
+    'pool_size': 5
+}

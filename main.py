@@ -2,12 +2,12 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from database.database_connection import DatabaseConnection
 from views.auth_view import LoginWindow
-from config import DB_CONFIG
+from config import DB_CONFIG, config
 
 class ExpoferiaApp:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Sistema de Gestión - Expoferia de Ingeniería")
+        self.root.title(config['default'].APP_NAME)
         self.root.geometry("1200x700")
         self.root.configure(bg='#f0f0f0')
         
