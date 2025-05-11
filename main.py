@@ -9,7 +9,7 @@ class ExpoferiaApp:
         self.root = tk.Tk()
         self.root.title(config['default'].APP_NAME)
         self.root.geometry("1200x700")
-        self.root.configure(bg='#f8f9fa')
+        self.root.configure(bg='#ffffff')
         
         # Configurar la conexión a la base de datos
         self.db = DatabaseConnection(**DB_CONFIG)
@@ -24,24 +24,62 @@ class ExpoferiaApp:
         style = ttk.Style()
         style.theme_use('clam')
         
-        # Configurar colores y fuentes
-        style.configure('TFrame', background='#f8f9fa')
-        style.configure('TLabel', background='#f8f9fa', font=('Helvetica', 10))
-        style.configure('TButton', 
-                       font=('Helvetica', 10), 
-                       padding=10,
-                       background='#4361ee',
-                       foreground='white')
-        style.configure('Title.TLabel', font=('Helvetica', 24, 'bold'))
-        style.configure('Header.TLabel', font=('Helvetica', 16, 'bold'))
+        # Configurar estilos generales
+        style.configure('Main.TFrame', background='#ffffff')
+        style.configure('Left.TFrame', background='#ffffff')
+        style.configure('Right.TFrame', background='#ffffff')
+        style.configure('Form.TFrame', background='#ffffff')
         
-        style.map('TButton',
-                  foreground=[('active', 'white'), ('!active', 'white')],
-                  background=[('active', '#364fc7'), ('!active', '#4361ee')])
+        # Estilos de texto
+        style.configure('Logo.TLabel',
+                       font=('Helvetica', 32, 'bold'),
+                       foreground='#4361ee',
+                       background='#ffffff')
+                       
+        style.configure('Subtitle.TLabel',
+                       font=('Helvetica', 16),
+                       foreground='#6c757d',
+                       background='#ffffff')
+                       
+        style.configure('InputLabel.TLabel',
+                       font=('Helvetica', 12),
+                       foreground='#495057',
+                       background='#ffffff')
+                       
+        style.configure('Link.TLabel',
+                       font=('Helvetica', 12),
+                       foreground='#6c757d',
+                       background='#ffffff')
+                       
+        style.configure('LinkButton.TLabel',
+                       font=('Helvetica', 12),
+                       foreground='#4361ee',
+                       background='#ffffff')
         
-        style.configure('Treeview', font=('Helvetica', 10), rowheight=25)
-        style.configure('Treeview.Heading', font=('Helvetica', 10, 'bold'))
-        style.map('Treeview', background=[('selected', '#4361ee')])
+        # Estilos de entrada
+        style.configure('Modern.TEntry',
+                       fieldbackground='#ffffff',
+                       borderwidth=1,
+                       relief='solid',
+                       padding=10)
+        
+        # Estilos de checkbox
+        style.configure('Modern.TCheckbutton',
+                       font=('Helvetica', 12),
+                       background='#ffffff')
+        
+        # Estilos para la vista de datos
+        style.configure('Treeview',
+                       font=('Helvetica', 10),
+                       rowheight=25,
+                       background='#ffffff',
+                       fieldbackground='#ffffff')
+                       
+        style.configure('Treeview.Heading',
+                       font=('Helvetica', 10, 'bold'))
+                       
+        style.map('Treeview',
+                 background=[('selected', '#4361ee')])
 
     def show_login(self):
         LoginWindow(self.root, self.db, self.on_login_success)
