@@ -9,7 +9,7 @@ class ExpoferiaApp:
         self.root = tk.Tk()
         self.root.title(config['default'].APP_NAME)
         self.root.geometry("1200x700")
-        self.root.configure(bg='#f0f0f0')
+        self.root.configure(bg='#f8f9fa')
         
         # Configurar la conexión a la base de datos
         self.db = DatabaseConnection(**DB_CONFIG)
@@ -25,26 +25,29 @@ class ExpoferiaApp:
         style.theme_use('clam')
         
         # Configurar colores y fuentes
-        style.configure('TFrame', background='#f0f0f0')
-        style.configure('TLabel', background='#f0f0f0', font=('Arial', 10))
-        style.configure('TButton', font=('Arial', 10), padding=5)
-        style.configure('Title.TLabel', font=('Arial', 16, 'bold'))
-        style.configure('Header.TLabel', font=('Arial', 12, 'bold'))
+        style.configure('TFrame', background='#f8f9fa')
+        style.configure('TLabel', background='#f8f9fa', font=('Helvetica', 10))
+        style.configure('TButton', 
+                       font=('Helvetica', 10), 
+                       padding=10,
+                       background='#4361ee',
+                       foreground='white')
+        style.configure('Title.TLabel', font=('Helvetica', 24, 'bold'))
+        style.configure('Header.TLabel', font=('Helvetica', 16, 'bold'))
         
         style.map('TButton',
-                  foreground=[('active', 'black'), ('!active', 'black')],
-                  background=[('active', '#d9d9d9'), ('!active', '#e6e6e6')])
+                  foreground=[('active', 'white'), ('!active', 'white')],
+                  background=[('active', '#364fc7'), ('!active', '#4361ee')])
         
-        style.configure('Treeview', font=('Arial', 10), rowheight=25)
-        style.configure('Treeview.Heading', font=('Arial', 10, 'bold'))
-        style.map('Treeview', background=[('selected', '#4a6984')])
+        style.configure('Treeview', font=('Helvetica', 10), rowheight=25)
+        style.configure('Treeview.Heading', font=('Helvetica', 10, 'bold'))
+        style.map('Treeview', background=[('selected', '#4361ee')])
 
     def show_login(self):
         LoginWindow(self.root, self.db, self.on_login_success)
 
     def on_login_success(self, usuario):
         self.usuario_actual = usuario
-        self.root.withdraw()  # Ocultar la ventana principal temporalmente
         
         # Mostrar la interfaz según el rol
         if usuario['rol'] == 'administrador':
@@ -61,7 +64,6 @@ class ExpoferiaApp:
         if hasattr(self, 'dashboard'):
             self.dashboard.destroy()
         self.usuario_actual = None
-        self.root.deiconify()  # Mostrar nuevamente la ventana principal
         self.show_login()
 
     def run(self):

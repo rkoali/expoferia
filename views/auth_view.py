@@ -9,174 +9,166 @@ class LoginWindow:
         self.db = db
         self.on_success = on_success_callback
         
-        self.window = tk.Toplevel(root)
-        self.window.title("Expoferia - Iniciar Sesión")
-        self.window.geometry("800x600")
-        self.window.resizable(False, False)
-        self.window.grab_set()
+        # Configure root window instead of creating a new one
+        self.root.title("Expoferia - Iniciar Sesión")
+        self.root.geometry("1200x700")
+        self.root.resizable(False, False)
         
-        # Configurar el color de fondo
-        self.window.configure(bg='#f0f2f5')
+        # Configure the color scheme
+        self.root.configure(bg='#f8f9fa')
         
         self.setup_ui()
         
     def setup_ui(self):
-        # Frame principal con diseño de dos columnas
-        main_frame = ttk.Frame(self.window)
-        main_frame.pack(expand=True, fill=tk.BOTH)
+        # Main container with two columns
+        main_container = ttk.Frame(self.root)
+        main_container.pack(expand=True, fill=tk.BOTH)
         
-        # Frame izquierdo (formulario)
-        left_frame = ttk.Frame(main_frame, padding=40)
+        # Left column (login form)
+        left_frame = ttk.Frame(main_container, padding=40)
         left_frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
         
-        # Logo y título
-        ttk.Label(
-            left_frame, 
-            text="Expoferia", 
-            font=('Helvetica', 24, 'bold'),
-            foreground='#1a73e8'
-        ).pack(pady=(0, 20))
+        # Logo and branding
+        logo_frame = ttk.Frame(left_frame)
+        logo_frame.pack(fill=tk.X, pady=(0, 40))
         
         ttk.Label(
-            left_frame,
+            logo_frame,
+            text="Expoferia",
+            font=('Helvetica', 32, 'bold'),
+            foreground='#4361ee'
+        ).pack(anchor=tk.W)
+        
+        ttk.Label(
+            logo_frame,
             text="Inicia sesión para continuar",
-            font=('Helvetica', 14),
-            foreground='#5f6368'
-        ).pack(pady=(0, 30))
+            font=('Helvetica', 16),
+            foreground='#6c757d'
+        ).pack(anchor=tk.W)
         
-        # Frame del formulario
+        # Login form
         form_frame = ttk.Frame(left_frame)
         form_frame.pack(fill=tk.X, pady=20)
         
-        # Estilo personalizado para los campos
-        style = ttk.Style()
-        style.configure(
-            'Custom.TEntry',
-            fieldbackground='white',
-            borderwidth=1,
-            relief='solid'
-        )
-        
-        # Campo de email
-        self.email_var = tk.StringVar()
+        # Email field
         email_frame = ttk.Frame(form_frame)
-        email_frame.pack(fill=tk.X, pady=10)
+        email_frame.pack(fill=tk.X, pady=(0, 20))
         
         ttk.Label(
             email_frame,
             text="Email",
-            font=('Helvetica', 10),
-            foreground='#5f6368'
+            font=('Helvetica', 12),
+            foreground='#495057'
         ).pack(anchor=tk.W)
         
-        self.email_entry = ttk.Entry(
+        self.email_var = tk.StringVar()
+        email_entry = ttk.Entry(
             email_frame,
             textvariable=self.email_var,
-            width=40,
-            style='Custom.TEntry'
+            font=('Helvetica', 12),
+            width=40
         )
-        self.email_entry.pack(fill=tk.X, pady=(5, 0))
+        email_entry.pack(fill=tk.X, pady=(5, 0))
         
-        # Campo de contraseña
-        self.password_var = tk.StringVar()
+        # Password field
         password_frame = ttk.Frame(form_frame)
-        password_frame.pack(fill=tk.X, pady=10)
+        password_frame.pack(fill=tk.X, pady=(0, 20))
         
         ttk.Label(
             password_frame,
             text="Contraseña",
-            font=('Helvetica', 10),
-            foreground='#5f6368'
+            font=('Helvetica', 12),
+            foreground='#495057'
         ).pack(anchor=tk.W)
         
-        self.password_entry = ttk.Entry(
+        self.password_var = tk.StringVar()
+        password_entry = ttk.Entry(
             password_frame,
             textvariable=self.password_var,
             show="•",
-            width=40,
-            style='Custom.TEntry'
+            font=('Helvetica', 12),
+            width=40
         )
-        self.password_entry.pack(fill=tk.X, pady=(5, 0))
+        password_entry.pack(fill=tk.X, pady=(5, 0))
         
-        # Checkbox "Recordarme"
-        self.remember_var = tk.BooleanVar()
+        # Remember me checkbox
         remember_frame = ttk.Frame(form_frame)
-        remember_frame.pack(fill=tk.X, pady=10)
+        remember_frame.pack(fill=tk.X, pady=(0, 20))
         
+        self.remember_var = tk.BooleanVar()
         ttk.Checkbutton(
             remember_frame,
             text="Recordarme",
-            variable=self.remember_var
+            variable=self.remember_var,
+            style='Modern.TCheckbutton'
         ).pack(side=tk.LEFT)
         
-        # Botón de inicio de sesión
-        button_style = ttk.Style()
-        button_style.configure(
-            'Custom.TButton',
-            background='#1a73e8',
-            foreground='white',
+        # Login button
+        style = ttk.Style()
+        style.configure(
+            'Modern.TButton',
+            font=('Helvetica', 12),
             padding=10
         )
         
         ttk.Button(
             form_frame,
             text="Iniciar Sesión",
-            style='Custom.TButton',
+            style='Modern.TButton',
             command=self.login
-        ).pack(fill=tk.X, pady=20)
+        ).pack(fill=tk.X, pady=(0, 20))
         
-        # Enlace para registro
+        # Register link
         register_frame = ttk.Frame(form_frame)
-        register_frame.pack(fill=tk.X, pady=10)
+        register_frame.pack(fill=tk.X)
         
         ttk.Label(
             register_frame,
             text="¿No tienes una cuenta?",
-            foreground='#5f6368'
+            font=('Helvetica', 12),
+            foreground='#6c757d'
         ).pack(side=tk.LEFT)
         
         register_link = ttk.Label(
             register_frame,
             text="Regístrate",
-            foreground='#1a73e8',
+            font=('Helvetica', 12),
+            foreground='#4361ee',
             cursor='hand2'
         )
         register_link.pack(side=tk.LEFT, padx=5)
         register_link.bind('<Button-1>', lambda e: self.show_register())
         
-        # Frame derecho (imagen decorativa)
-        right_frame = ttk.Frame(main_frame)
+        # Right column (decorative)
+        right_frame = ttk.Frame(main_container)
         right_frame.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
         
-        # Aquí podrías agregar una imagen decorativa
-        # Por ahora usamos un degradado simple
+        # Create decorative gradient canvas
         canvas = tk.Canvas(
             right_frame,
-            width=400,
-            height=600,
-            bg='#e8f0fe',
-            highlightthickness=0
+            width=600,
+            height=700,
+            highlightthickness=0,
+            bg='#4361ee'
         )
         canvas.pack(expand=True, fill=tk.BOTH)
         
-        # Crear un degradado simple
-        for i in range(600):
+        # Create gradient effect
+        for i in range(700):
             color = '#{:02x}{:02x}{:02x}'.format(
-                int(232 - (i/600)*50),
-                int(240 - (i/600)*50),
-                int(254 - (i/600)*50)
+                int(67 + (i/700)*30),
+                int(97 + (i/700)*30),
+                int(238 - (i/700)*30)
             )
-            canvas.create_line(0, i, 400, i, fill=color)
+            canvas.create_line(0, i, 600, i, fill=color)
         
-        self.center_window()
+        # Configure styles
+        style = ttk.Style()
+        style.configure('Modern.TCheckbutton', font=('Helvetica', 12))
+        style.configure('TEntry', padding=10)
         
-    def center_window(self):
-        self.window.update_idletasks()
-        width = self.window.winfo_width()
-        height = self.window.winfo_height()
-        x = (self.window.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.window.winfo_screenheight() // 2) - (height // 2)
-        self.window.geometry(f'{width}x{height}+{x}+{y}')
+        # Set initial focus
+        email_entry.focus_set()
         
     def login(self):
         email = self.email_var.get()
@@ -186,7 +178,7 @@ class LoginWindow:
             messagebox.showerror(
                 "Error",
                 "Por favor complete todos los campos",
-                parent=self.window
+                parent=self.root
             )
             return
             
@@ -198,7 +190,7 @@ class LoginWindow:
                 messagebox.showerror(
                     "Error",
                     "Credenciales incorrectas",
-                    parent=self.window
+                    parent=self.root
                 )
                 return
                 
@@ -206,26 +198,24 @@ class LoginWindow:
             
             if usuario['contraseña_hash'] == hashed_password:
                 if self.remember_var.get():
-                    # Aquí implementaríamos la lógica para recordar al usuario
+                    # Implementar lógica para recordar usuario
                     pass
                     
                 self.on_success(usuario)
-                self.window.destroy()
             else:
                 messagebox.showerror(
                     "Error",
                     "Credenciales incorrectas",
-                    parent=self.window
+                    parent=self.root
                 )
                 
         except Exception as e:
             messagebox.showerror(
                 "Error",
                 f"Error al iniciar sesión: {str(e)}",
-                parent=self.window
+                parent=self.root
             )
     
     def show_register(self):
-        self.window.destroy()
         from views.usuario_form import UsuarioForm
         UsuarioForm(self.root, self.db)
