@@ -4,7 +4,10 @@ from views.reportes_view import ReportesWindow
 from views.proyecto_form import ProyectoForm
 from views.usuario_form import UsuarioForm
 from views.usuario_edit_form import UsuarioEditForm
-from views.evento_form import EventoForm  # Asumiendo que existe este módulo
+from views.evento_form import EventoForm
+from PIL import Image, ImageTk
+import requests
+from io import BytesIO
 
 class AdminDashboard:
     def __init__(self, app, usuario):
@@ -12,92 +15,208 @@ class AdminDashboard:
         self.usuario = usuario
         self.db = app.db
         
-        self.window = tk.Toplevel(app.root)
-        self.window.title(f"Panel de Administración - Bienvenido {usuario['nombre']}")
-        self.window.geometry("1200x700")
-        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
+        # Configure main window
+        self.app.root.title(f"Panel de Administración - {usuario['nombre']}")
+        self.app.root.configure(bg='#ffffff')
         
+        # Clear existing widgets
+        for widget in self.app.root.winfo_children():
+            widget.destroy()
+            
         self.setup_ui()
         self.load_proyectos()
         self.load_usuarios()
         self.load_eventos()
 
     def setup_ui(self):
-        """Configura la interfaz principal del dashboard"""
-        main_frame = ttk.Frame(self.window)
-        main_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+        # Main container
+        self.main_container = ttk.Frame(self.app.root, style='Main.TFrame')
+        self.main_container.pack(fill=tk.BOTH, expand=True)
         
-        # Barra superior
-        top_frame = ttk.Frame(main_frame)
-        top_frame.pack(fill=tk.X, pady=5)
+        # Top navigation bar
+        nav_frame = ttk.Frame(self.main_container, style='Nav.TFrame')
+        nav_frame.pack(fill=tk.X, pady=0)
         
-        ttk.Label(top_frame, text="Panel de Administración", style='Title.TLabel').pack(side=tk.LEFT)
+        # Configure styles for modern look
+        style = ttk.Style()
+        style.configure('Nav.TFrame', background='#6366f1')
+        style.configure('Nav.TLabel', background='#6366f1', foreground='white')
+        style.configure('NavButton.TButton', background='#4f46e5', padding=5)
         
-        btn_frame = ttk.Frame(top_frame)
-        btn_frame.pack(side=tk.RIGHT)
+        # Navigation content
+        nav_content = ttk.Frame(nav_frame, style='Nav.TFrame')
+        nav_content.pack(fill=tk.X, padx=20, pady=10)
         
-        ttk.Button(btn_frame, text="Generar Reporte", command=self.open_reportes).pack(side=tk.LEFT, padx=2)
-        ttk.Button(btn_frame, text="Cerrar Sesión", command=self.logout).pack(side=tk.LEFT, padx=2)
+        # Left side - Brand and navigation
+        nav_left = ttk.Frame(nav_content, style='Nav.TFrame')
+        nav_left.pack(side=tk.LEFT)
         
-        # Notebook (pestañas)
-        self.notebook = ttk.Notebook(main_frame)
-        self.notebook.pack(expand=True, fill=tk.BOTH)
+        ttk.Label(
+            nav_left,
+            text="ExpoFeria",
+            style='Nav.TLabel',
+            font=('Helvetica', 16, 'bold')
+        ).pack(side=tk.LEFT, padx=(0, 20))
         
-        # Configurar pestañas
+        # Navigation buttons
+        self.nav_buttons = []
+        for text in ['Dashboard', 'Proyectos', 'Usuarios', 'Reportes']:
+            btn = ttk.Button(
+                nav_left,
+                text=text,
+                style='NavButton.TButton'
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+            self.nav_buttons.append(btn)
+            
+        # Right side - User menu
+        nav_right = ttk.Frame(nav_content, style='Nav.TFrame')
+        nav_right.pack(side=tk.RIGHT)
+        
+        # User profile section
+        profile_frame = ttk.Frame(nav_right, style='Nav.TFrame')
+        profile_frame.pack(side=tk.RIGHT, padx=10)
+        
+        # Load and display profile image
+        try:
+            response = requests.get("https://i.pravatar.cc/32")
+            img = Image.open(BytesIO(response.content))
+            photo = ImageTk.PhotoImage(img)
+            profile_label = ttk.Label(profile_frame, image=photo)
+            profile_label.image = photo
+            profile_label.pack(side=tk.LEFT, padx=5)
+        except:
+            # Fallback if image loading fails
+            ttk.Label(
+                profile_frame,
+                text="👤",
+                style='Nav.TLabel',
+                font=('Helvetica', 16)
+            ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(
+            profile_frame,
+            text=self.usuario['nombre'],
+            style='Nav.TLabel'
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            profile_frame,
+            text="Cerrar Sesión",
+            command=self.logout,
+            style='NavButton.TButton'
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Main content area
+        content_frame = ttk.Frame(self.main_container)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Sidebar
+        sidebar = ttk.Frame(content_frame, style='Sidebar.TFrame')
+        sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
+        
+        # Sidebar items
+        sidebar_items = [
+            ('📊 Dashboard', None),
+            ('📁 Proyectos', self.show_proyectos),
+            ('👥 Usuarios', self.show_usuarios),
+            ('📈 Reportes', self.open_reportes),
+            ('⚙️ Configuración', None)
+        ]
+        
+        for text, command in sidebar_items:
+            btn = ttk.Button(
+                sidebar,
+                text=text,
+                command=command,
+                style='Sidebar.TButton',
+                width=20
+            )
+            btn.pack(fill=tk.X, pady=2)
+        
+        # Main content notebook
+        self.notebook = ttk.Notebook(content_frame)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        
+        # Setup tabs
         self.setup_proyectos_tab()
         self.setup_usuarios_tab()
         self.setup_eventos_tab()
 
     def setup_proyectos_tab(self):
-        """Configura la pestaña de proyectos"""
         frame = ttk.Frame(self.notebook)
         self.notebook.add(frame, text="Proyectos")
         
-        # Toolbar
-        toolbar = ttk.Frame(frame)
-        toolbar.pack(fill=tk.X, pady=5)
+        # Toolbar with modern styling
+        toolbar = ttk.Frame(frame, style='Toolbar.TFrame')
+        toolbar.pack(fill=tk.X, pady=(0, 10))
         
-        ttk.Button(toolbar, text="Nuevo", command=self.nuevo_proyecto).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Editar", command=self.editar_proyecto).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Eliminar", command=self.eliminar_proyecto).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Actualizar", command=self.load_proyectos).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            toolbar,
+            text="+ Nuevo Proyecto",
+            command=self.nuevo_proyecto,
+            style='Action.TButton'
+        ).pack(side=tk.LEFT, padx=5)
         
-        # Treeview
-        self.proyectos_tree = ttk.Treeview(frame, columns=('id', 'titulo', 'profesor', 'estado', 'fecha'), selectmode='browse')
-        self.proyectos_tree.pack(expand=True, fill=tk.BOTH)
+        # Search box
+        search_frame = ttk.Frame(toolbar)
+        search_frame.pack(side=tk.RIGHT)
         
-        # Configurar columnas
-        columns = [
-            ('#0', '#', 50),
-            ('id', 'ID', 50),
-            ('titulo', 'Título', 200),
-            ('profesor', 'Profesor', 150),
-            ('estado', 'Estado', 100),
-            ('fecha', 'Fecha Creación', 100)
-        ]
+        self.search_var = tk.StringVar()
+        search_entry = ttk.Entry(
+            search_frame,
+            textvariable=self.search_var,
+            width=30
+        )
+        search_entry.pack(side=tk.LEFT, padx=5)
+        search_entry.insert(0, "Buscar proyectos...")
         
-        for col, text, width in columns:
-            self.proyectos_tree.heading(col, text=text)
-            self.proyectos_tree.column(col, width=width, stretch=tk.NO if width < 100 else tk.YES)
+        # Modern table for projects
+        columns = ('id', 'titulo', 'profesor', 'estado', 'fecha', 'acciones')
+        self.proyectos_tree = ttk.Treeview(
+            frame,
+            columns=columns,
+            show='headings',
+            style='Modern.Treeview'
+        )
         
-        # Scrollbar
+        # Configure columns
+        self.proyectos_tree.heading('id', text='ID')
+        self.proyectos_tree.heading('titulo', text='Título')
+        self.proyectos_tree.heading('profesor', text='Profesor')
+        self.proyectos_tree.heading('estado', text='Estado')
+        self.proyectos_tree.heading('fecha', text='Fecha')
+        self.proyectos_tree.heading('acciones', text='Acciones')
+        
+        # Column widths
+        self.proyectos_tree.column('id', width=50)
+        self.proyectos_tree.column('titulo', width=300)
+        self.proyectos_tree.column('profesor', width=200)
+        self.proyectos_tree.column('estado', width=100)
+        self.proyectos_tree.column('fecha', width=100)
+        self.proyectos_tree.column('acciones', width=100)
+        
+        # Add scrollbar
         scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self.proyectos_tree.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.proyectos_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack elements
+        self.proyectos_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     def setup_usuarios_tab(self):
-        """Configura la pestaña de usuarios"""
         frame = ttk.Frame(self.notebook)
         self.notebook.add(frame, text="Usuarios")
         
-        # Toolbar
-        toolbar = ttk.Frame(frame)
-        toolbar.pack(fill=tk.X, pady=5)
+        toolbar = ttk.Frame(frame, style='Toolbar.TFrame')
+        toolbar.pack(fill=tk.X, pady=(0, 10))
         
-        ttk.Button(toolbar, text="Nuevo", command=self.nuevo_usuario).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Editar", command=self.editar_usuario).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Eliminar", command=self.eliminar_usuario).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Actualizar", command=self.load_usuarios).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            toolbar,
+            text="+ Nuevo Usuario",
+            command=self.nuevo_usuario,
+            style='Action.TButton'
+        ).pack(side=tk.LEFT, padx=5)
         
         # Treeview
         self.usuarios_tree = ttk.Treeview(frame, columns=('id', 'nombre', 'email', 'rol', 'activo'), selectmode='browse')
@@ -123,18 +242,18 @@ class AdminDashboard:
         self.usuarios_tree.configure(yscrollcommand=scrollbar.set)
 
     def setup_eventos_tab(self):
-        """Configura la pestaña de eventos"""
         frame = ttk.Frame(self.notebook)
         self.notebook.add(frame, text="Eventos")
         
-        # Toolbar
-        toolbar = ttk.Frame(frame)
-        toolbar.pack(fill=tk.X, pady=5)
+        toolbar = ttk.Frame(frame, style='Toolbar.TFrame')
+        toolbar.pack(fill=tk.X, pady=(0, 10))
         
-        ttk.Button(toolbar, text="Nuevo", command=self.nuevo_evento).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Editar", command=self.editar_evento).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Eliminar", command=self.eliminar_evento).pack(side=tk.LEFT, padx=2)
-        ttk.Button(toolbar, text="Actualizar", command=self.load_eventos).pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            toolbar,
+            text="+ Nuevo Evento",
+            command=self.nuevo_evento,
+            style='Action.TButton'
+        ).pack(side=tk.LEFT, padx=5)
         
         # Treeview
         self.eventos_tree = ttk.Treeview(frame, columns=('id', 'nombre', 'fecha_inicio', 'fecha_fin', 'tipo'), selectmode='browse')
@@ -159,9 +278,17 @@ class AdminDashboard:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.eventos_tree.configure(yscrollcommand=scrollbar.set)
 
-    # Métodos para cargar datos
+    def show_proyectos(self):
+        self.notebook.select(0)
+
+    def show_usuarios(self):
+        self.notebook.select(1)
+
+    def logout(self):
+        if messagebox.askokcancel("Cerrar Sesión", "¿Está seguro que desea cerrar sesión?"):
+            self.app.logout()
+
     def load_proyectos(self):
-        """Carga los proyectos desde la base de datos"""
         try:
             self.proyectos_tree.delete(*self.proyectos_tree.get_children())
             
@@ -187,7 +314,6 @@ class AdminDashboard:
             messagebox.showerror("Error", f"Error al cargar proyectos: {str(e)}")
 
     def load_usuarios(self):
-        """Carga los usuarios desde la base de datos"""
         try:
             self.usuarios_tree.delete(*self.usuarios_tree.get_children())
             
@@ -207,7 +333,6 @@ class AdminDashboard:
             messagebox.showerror("Error", f"Error al cargar usuarios: {str(e)}")
 
     def load_eventos(self):
-        """Carga los eventos desde la base de datos"""
         try:
             self.eventos_tree.delete(*self.eventos_tree.get_children())
             
@@ -226,13 +351,10 @@ class AdminDashboard:
         except Exception as e:
             messagebox.showerror("Error", f"Error al cargar eventos: {str(e)}")
 
-    # Métodos CRUD para Proyectos
     def nuevo_proyecto(self):
-        """Abre el formulario para crear un nuevo proyecto"""
         ProyectoForm(self.window, self.db, None, self.load_proyectos)
 
     def editar_proyecto(self):
-        """Abre el formulario para editar un proyecto existente"""
         selected = self.proyectos_tree.selection()
         if not selected:
             messagebox.showwarning("Advertencia", "Por favor seleccione un proyecto")
@@ -252,7 +374,6 @@ class AdminDashboard:
             messagebox.showerror("Error", "No se encontró el proyecto seleccionado")
 
     def eliminar_proyecto(self):
-        """Elimina el proyecto seleccionado"""
         selected = self.proyectos_tree.selection()
         if not selected:
             messagebox.showwarning("Advertencia", "Por favor seleccione un proyecto")
@@ -272,13 +393,10 @@ class AdminDashboard:
             except Exception as e:
                 messagebox.showerror("Error", f"Error al eliminar proyecto: {str(e)}")
 
-    # Métodos CRUD para Usuarios
     def nuevo_usuario(self):
-        """Abre el formulario para crear un nuevo usuario"""
         UsuarioForm(self.window, self.db, self.load_usuarios)
 
     def editar_usuario(self):
-        """Abre el formulario para editar un usuario existente"""
         selected = self.usuarios_tree.selection()
         if not selected:
             messagebox.showwarning("Advertencia", "Por favor seleccione un usuario")
@@ -288,7 +406,6 @@ class AdminDashboard:
         UsuarioEditForm(self.window, self.db, usuario_id, self.load_usuarios)
 
     def eliminar_usuario(self):
-        """Elimina el usuario seleccionado"""
         selected = self.usuarios_tree.selection()
         if not selected:
             messagebox.showwarning("Advertencia", "Por favor seleccione un usuario")
@@ -308,13 +425,10 @@ class AdminDashboard:
             except Exception as e:
                 messagebox.showerror("Error", f"Error al eliminar usuario: {str(e)}")
 
-    # Métodos CRUD para Eventos
     def nuevo_evento(self):
-        """Abre el formulario para crear un nuevo evento"""
         EventoForm(self.window, self.db, self.load_eventos)
 
     def editar_evento(self):
-        """Abre el formulario para editar un evento existente"""
         selected = self.eventos_tree.selection()
         if not selected:
             messagebox.showwarning("Advertencia", "Por favor seleccione un evento")
@@ -334,7 +448,6 @@ class AdminDashboard:
             messagebox.showerror("Error", "No se encontró el evento seleccionado")
 
     def eliminar_evento(self):
-        """Elimina el evento seleccionado"""
         selected = self.eventos_tree.selection()
         if not selected:
             messagebox.showwarning("Advertencia", "Por favor seleccione un evento")
@@ -354,18 +467,5 @@ class AdminDashboard:
             except Exception as e:
                 messagebox.showerror("Error", f"Error al eliminar evento: {str(e)}")
 
-    # Otros métodos
     def open_reportes(self):
-        """Abre la ventana de generación de reportes"""
         ReportesWindow(self.window, self.db)
-
-    def logout(self):
-        """Cierra la sesión del administrador"""
-        self.window.destroy()
-        self.app.logout()
-
-    def on_close(self):
-        """Maneja el cierre de la ventana"""
-        if messagebox.askokcancel("Salir", "¿Está seguro que desea salir del sistema?"):
-            self.window.destroy()
-            self.app.root.quit()
