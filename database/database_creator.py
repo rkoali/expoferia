@@ -101,6 +101,17 @@ class DatabaseCreator:
             )
             """,
             """
+            CREATE TABLE comentarios_proyecto (
+                id_comentario INT AUTO_INCREMENT PRIMARY KEY,
+                id_proyecto INT NOT NULL,
+                id_profesor INT NOT NULL,
+                comentario TEXT NOT NULL,
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto) ON DELETE CASCADE,
+                FOREIGN KEY (id_profesor) REFERENCES profesores(id_profesor) ON DELETE CASCADE
+            )
+            """,
+            """
             CREATE TABLE eventos (
                 id_evento INT AUTO_INCREMENT PRIMARY KEY,
                 nombre VARCHAR(100) NOT NULL,

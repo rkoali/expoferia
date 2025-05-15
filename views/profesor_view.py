@@ -4,6 +4,81 @@ from views.proyecto_form import ProyectoForm
 from PIL import Image, ImageTk
 import requests
 from io import BytesIO
+from ttkthemes import ThemedTk
+
+class ProyectoCard(ttk.Frame):
+    def __init__(self, parent, proyecto, on_approve, on_reject, on_comment):
+        super().__init__(parent, style='Card.TFrame')
+        
+        # Project title
+        title_frame = ttk.Frame(self)
+        title_frame.pack(fill=tk.X, padx=10, pady=(10,5))
+        
+        ttk.Label(
+            title_frame,
+            text=proyecto['titulo'],
+            style='CardTitle.TLabel'
+        ).pack(side=tk.LEFT)
+        
+        status_label = ttk.Label(
+            title_frame,
+            text=proyecto['estado'],
+            style=f'Status{proyecto["estado"].capitalize()}.TLabel'
+        )
+        status_label.pack(side=tk.RIGHT)
+        
+        # Project description
+        desc_frame = ttk.Frame(self)
+        desc_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(
+            desc_frame,
+            text=proyecto['descripcion'] or "Sin descripción",
+            style='CardDesc.TLabel',
+            wraplength=400
+        ).pack(anchor=tk.W)
+        
+        # Project metadata
+        meta_frame = ttk.Frame(self)
+        meta_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(
+            meta_frame,
+            text=f"👥 {proyecto['num_estudiantes']} estudiantes",
+            style='CardMeta.TLabel'
+        ).pack(side=tk.LEFT, padx=(0,10))
+        
+        ttk.Label(
+            meta_frame,
+            text=f"📅 {proyecto['fecha_creacion']}",
+            style='CardMeta.TLabel'
+        ).pack(side=tk.LEFT)
+        
+        # Actions
+        action_frame = ttk.Frame(self)
+        action_frame.pack(fill=tk.X, padx=10, pady=(5,10))
+        
+        if proyecto['estado'] == 'en_proceso':
+            ttk.Button(
+                action_frame,
+                text="✓ Aprobar",
+                style='Success.TButton',
+                command=lambda: on_approve(proyecto['id_proyecto'])
+            ).pack(side=tk.LEFT, padx=(0,5))
+            
+            ttk.Button(
+                action_frame,
+                text="✗ Rechazar",
+                style='Danger.TButton',
+                command=lambda: on_reject(proyecto['id_proyecto'])
+            ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            action_frame,
+            text="💬 Comentar",
+            style='Info.TButton',
+            command=lambda: on_comment(proyecto['id_proyecto'])
+        ).pack(side=tk.LEFT, padx=5)
 
 class ProfesorDashboard:
     def __init__(self, app, usuario):
@@ -25,8 +100,252 @@ class ProfesorDashboard:
             messagebox.showerror("Error", "No se pudo identificar su perfil de profesor")
             return
             
+        self.setup_styles()
         self.setup_ui()
         self.load_proyectos()
+
+    def setup_styles(self):
+        style = ttk.Style()
+        
+        # Frame styles
+        style.configure('Card.TFrame', background='#ffffff', relief='solid', borderwidth=1)
+        style.configure('Header.TFrame', background='#24292e')
+        
+        # Label styles
+        style.configure('CardTitle.TLabel', 
+                       font=('Segoe UI', 14, 'bold'),
+                       foreground='#24292e',
+                       background='#ffffff')
+                       
+        style.configure('CardDesc.TLabel',
+                       font=('Segoe UI', 11),
+                       foreground='#57606a',
+                       background='#ffffff')
+                       
+        style.configure('CardMeta.TLabel',
+                       font=('Segoe UI', 10),
+                       foreground='#57606a',
+                       background='#ffffff')
+                       
+        style.configure('StatusEnProceso.TLabel',
+                       font=('Segoe UI', 10),
+                       foreground='#0969da',
+                       background='#ddf4ff',
+                       padding=5)
+                       
+        style.configure('StatusAprobado.TLabel',
+                       font=('Segoe UI', 10),
+                       foreground='#1a7f37',
+                       background='#dafbe1',
+                       padding=5)
+                       
+        style.configure('StatusRechazado.TLabel',
+                       font=('Segoe UI', 10),
+                       foreground='#cf222e',
+                       background='#ffebe9',
+                       padding=5)
+        
+        # Button styles
+        style.configure('Success.TButton',
+                       font=('Segoe UI', 10),
+                       background='#2da44e',
+                       foreground='#ffffff')
+                       
+        style.configure('Danger.TButton',
+                       font=('Segoe UI', 10),
+                       background='#cf222e',
+                       foreground='#ffffff')
+                       
+        style.configure('Info.TButton',
+                       font=('Segoe UI', 10),
+                       background='#0969da',
+                       foreground='#ffffff')
+
+    def setup_ui(self):
+        # Header
+        header = ttk.Frame(self.app.root, style='Header.TFrame')
+        header.pack(fill=tk.X, pady=(0,20))
+        
+        # Logo and title
+        ttk.Label(
+            header,
+            text="ExpoFeria",
+            font=('Segoe UI', 20, 'bold'),
+            foreground='#ffffff',
+            background='#24292e'
+        ).pack(side=tk.LEFT, padx=20, pady=10)
+        
+        # User menu
+        user_frame = ttk.Frame(header, style='Header.TFrame')
+        user_frame.pack(side=tk.RIGHT, padx=20)
+        
+        ttk.Label(
+            user_frame,
+            text=f"👤 {self.usuario['nombre']}",
+            font=('Segoe UI', 12),
+            foreground='#ffffff',
+            background='#24292e'
+        ).pack(side=tk.LEFT, padx=(0,10))
+        
+        ttk.Button(
+            user_frame,
+            text="Cerrar Sesión",
+            command=self.logout
+        ).pack(side=tk.LEFT)
+        
+        # Main content
+        main_frame = ttk.Frame(self.app.root)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20)
+        
+        # Toolbar
+        toolbar = ttk.Frame(main_frame)
+        toolbar.pack(fill=tk.X, pady=(0,20))
+        
+        ttk.Label(
+            toolbar,
+            text="Proyectos",
+            font=('Segoe UI', 24, 'bold')
+        ).pack(side=tk.LEFT)
+        
+        # Filter buttons
+        self.filter_var = tk.StringVar(value='todos')
+        
+        for text, value in [
+            ('Todos', 'todos'),
+            ('En Proceso', 'en_proceso'),
+            ('Aprobados', 'aprobado'),
+            ('Rechazados', 'rechazado')
+        ]:
+            ttk.Radiobutton(
+                toolbar,
+                text=text,
+                value=value,
+                variable=self.filter_var,
+                command=self.load_proyectos
+            ).pack(side=tk.LEFT, padx=10)
+        
+        # Projects container with scrollbar
+        container = ttk.Frame(main_frame)
+        container.pack(fill=tk.BOTH, expand=True)
+        
+        self.canvas = tk.Canvas(container, bg='#f6f8fa')
+        scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=self.canvas.yview)
+        
+        self.projects_frame = ttk.Frame(self.canvas, style='Projects.TFrame')
+        self.projects_frame.bind(
+            '<Configure>',
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox('all'))
+        )
+        
+        self.canvas.create_window((0,0), window=self.projects_frame, anchor=tk.NW)
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+        
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def load_proyectos(self):
+        try:
+            # Clear existing projects
+            for widget in self.projects_frame.winfo_children():
+                widget.destroy()
+            
+            # Build query based on filter
+            filter_value = self.filter_var.get()
+            query = """
+                SELECT p.*, COUNT(pe.id_estudiante) as num_estudiantes
+                FROM proyectos p
+                LEFT JOIN proyecto_estudiantes pe ON p.id_proyecto = pe.id_proyecto
+                WHERE p.id_profesor_responsable = %s
+            """
+            
+            params = [self.profesor_id]
+            
+            if filter_value != 'todos':
+                query += " AND p.estado = %s"
+                params.append(filter_value)
+                
+            query += " GROUP BY p.id_proyecto ORDER BY p.fecha_creacion DESC"
+            
+            proyectos = self.db.execute_query(query, tuple(params), fetch_all=True)
+            
+            for proyecto in proyectos:
+                card = ProyectoCard(
+                    self.projects_frame,
+                    proyecto,
+                    self.aprobar_proyecto,
+                    self.rechazar_proyecto,
+                    self.comentar_proyecto
+                )
+                card.pack(fill=tk.X, padx=10, pady=5)
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar los proyectos: {str(e)}")
+
+    def aprobar_proyecto(self, proyecto_id):
+        if messagebox.askyesno("Confirmar", "¿Está seguro que desea aprobar este proyecto?"):
+            try:
+                self.db.execute_query(
+                    "UPDATE proyectos SET estado = 'aprobado' WHERE id_proyecto = %s",
+                    (proyecto_id,),
+                    commit=True
+                )
+                messagebox.showinfo("Éxito", "Proyecto aprobado correctamente")
+                self.load_proyectos()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al aprobar proyecto: {str(e)}")
+
+    def rechazar_proyecto(self, proyecto_id):
+        if messagebox.askyesno("Confirmar", "¿Está seguro que desea rechazar este proyecto?"):
+            try:
+                self.db.execute_query(
+                    "UPDATE proyectos SET estado = 'rechazado' WHERE id_proyecto = %s",
+                    (proyecto_id,),
+                    commit=True
+                )
+                messagebox.showinfo("Éxito", "Proyecto rechazado correctamente")
+                self.load_proyectos()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al rechazar proyecto: {str(e)}")
+
+    def comentar_proyecto(self, proyecto_id):
+        comentario = tk.Toplevel(self.app.root)
+        comentario.title("Comentar Proyecto")
+        comentario.geometry("400x300")
+        
+        ttk.Label(
+            comentario,
+            text="Añadir Comentario",
+            font=('Segoe UI', 14, 'bold')
+        ).pack(pady=10)
+        
+        texto = tk.Text(comentario, height=10)
+        texto.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
+        
+        def guardar_comentario():
+            contenido = texto.get("1.0", tk.END).strip()
+            if contenido:
+                try:
+                    self.db.execute_query(
+                        """
+                        INSERT INTO comentarios_proyecto 
+                        (id_proyecto, id_profesor, comentario, fecha)
+                        VALUES (%s, %s, %s, NOW())
+                        """,
+                        (proyecto_id, self.profesor_id, contenido),
+                        commit=True
+                    )
+                    messagebox.showinfo("Éxito", "Comentario guardado correctamente")
+                    comentario.destroy()
+                except Exception as e:
+                    messagebox.showerror("Error", f"Error al guardar comentario: {str(e)}")
+            else:
+                messagebox.showwarning("Advertencia", "El comentario no puede estar vacío")
+        
+        ttk.Button(
+            comentario,
+            text="Guardar Comentario",
+            command=guardar_comentario
+        ).pack(pady=10)
 
     def obtener_id_profesor(self):
         try:
@@ -40,249 +359,6 @@ class ProfesorDashboard:
         except Exception as e:
             messagebox.showerror("Error", f"Error al obtener ID de profesor: {str(e)}")
             return None
-
-    def setup_ui(self):
-        # Main container
-        self.main_container = ttk.Frame(self.app.root, style='Main.TFrame')
-        self.main_container.pack(fill=tk.BOTH, expand=True)
-        
-        # Top navigation bar
-        nav_frame = ttk.Frame(self.main_container, style='Nav.TFrame')
-        nav_frame.pack(fill=tk.X, pady=0)
-        
-        # Configure styles for modern look
-        style = ttk.Style()
-        style.configure('Nav.TFrame', background='#6366f1')
-        style.configure('Nav.TLabel', background='#6366f1', foreground='white')
-        style.configure('NavButton.TButton', background='#4f46e5', padding=5)
-        
-        # Navigation content
-        nav_content = ttk.Frame(nav_frame, style='Nav.TFrame')
-        nav_content.pack(fill=tk.X, padx=20, pady=10)
-        
-        # Left side - Brand and navigation
-        nav_left = ttk.Frame(nav_content, style='Nav.TFrame')
-        nav_left.pack(side=tk.LEFT)
-        
-        ttk.Label(
-            nav_left,
-            text="ExpoFeria",
-            style='Nav.TLabel',
-            font=('Helvetica', 16, 'bold')
-        ).pack(side=tk.LEFT, padx=(0, 20))
-        
-        # Navigation buttons
-        self.nav_buttons = []
-        for text in ['Proyectos', 'Estudiantes', 'Reportes']:
-            btn = ttk.Button(
-                nav_left,
-                text=text,
-                style='NavButton.TButton'
-            )
-            btn.pack(side=tk.LEFT, padx=5)
-            self.nav_buttons.append(btn)
-            
-        # Right side - User menu
-        nav_right = ttk.Frame(nav_content, style='Nav.TFrame')
-        nav_right.pack(side=tk.RIGHT)
-        
-        # User profile section
-        profile_frame = ttk.Frame(nav_right, style='Nav.TFrame')
-        profile_frame.pack(side=tk.RIGHT, padx=10)
-        
-        # Load and display profile image
-        try:
-            response = requests.get("https://i.pravatar.cc/32")
-            img = Image.open(BytesIO(response.content))
-            photo = ImageTk.PhotoImage(img)
-            profile_label = ttk.Label(profile_frame, image=photo)
-            profile_label.image = photo
-            profile_label.pack(side=tk.LEFT, padx=5)
-        except:
-            ttk.Label(
-                profile_frame,
-                text="👤",
-                style='Nav.TLabel',
-                font=('Helvetica', 16)
-            ).pack(side=tk.LEFT, padx=5)
-        
-        ttk.Label(
-            profile_frame,
-            text=self.usuario['nombre'],
-            style='Nav.TLabel'
-        ).pack(side=tk.LEFT, padx=5)
-        
-        ttk.Button(
-            profile_frame,
-            text="Cerrar Sesión",
-            command=self.logout,
-            style='NavButton.TButton'
-        ).pack(side=tk.LEFT, padx=5)
-
-        # Main content area with sidebar
-        content_frame = ttk.Frame(self.main_container)
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Sidebar
-        sidebar = ttk.Frame(content_frame, style='Sidebar.TFrame')
-        sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
-        
-        # Sidebar items with icons
-        sidebar_items = [
-            ('📊 Dashboard', self.show_dashboard),
-            ('📁 Proyectos', self.show_proyectos),
-            ('👥 Estudiantes', None),
-            ('📈 Reportes', None),
-            ('⚙️ Configuración', None)
-        ]
-        
-        for text, command in sidebar_items:
-            btn = ttk.Button(
-                sidebar,
-                text=text,
-                command=command,
-                style='Sidebar.TButton',
-                width=20
-            )
-            btn.pack(fill=tk.X, pady=2)
-
-        # Main content notebook
-        self.notebook = ttk.Notebook(content_frame)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
-        
-        # Setup tabs
-        self.setup_dashboard_tab()
-        self.setup_proyectos_tab()
-
-    def setup_dashboard_tab(self):
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="Dashboard")
-        
-        # Statistics section
-        stats_frame = ttk.Frame(frame)
-        stats_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        stats = [
-            ("Proyectos Activos", "5"),
-            ("Estudiantes", "15"),
-            ("Proyectos Completados", "3"),
-            ("Evaluaciones Pendientes", "2")
-        ]
-        
-        for i, (label, value) in enumerate(stats):
-            stat_frame = ttk.Frame(stats_frame, style='Stat.TFrame')
-            stat_frame.grid(row=0, column=i, padx=10)
-            
-            ttk.Label(
-                stat_frame,
-                text=value,
-                style='StatValue.TLabel',
-                font=('Helvetica', 24, 'bold')
-            ).pack()
-            
-            ttk.Label(
-                stat_frame,
-                text=label,
-                style='StatLabel.TLabel'
-            ).pack()
-
-    def setup_proyectos_tab(self):
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="Proyectos")
-        
-        # Toolbar with modern styling
-        toolbar = ttk.Frame(frame, style='Toolbar.TFrame')
-        toolbar.pack(fill=tk.X, pady=(0, 10))
-        
-        ttk.Button(
-            toolbar,
-            text="+ Nuevo Proyecto",
-            command=self.nuevo_proyecto,
-            style='Action.TButton'
-        ).pack(side=tk.LEFT, padx=5)
-        
-        # Search box
-        search_frame = ttk.Frame(toolbar)
-        search_frame.pack(side=tk.RIGHT)
-        
-        self.search_var = tk.StringVar()
-        search_entry = ttk.Entry(
-            search_frame,
-            textvariable=self.search_var,
-            width=30
-        )
-        search_entry.pack(side=tk.LEFT, padx=5)
-        search_entry.insert(0, "Buscar proyectos...")
-        
-        # Projects table
-        columns = ('id', 'titulo', 'estado', 'fecha', 'estudiantes', 'acciones')
-        self.proyectos_tree = ttk.Treeview(
-            frame,
-            columns=columns,
-            show='headings',
-            style='Modern.Treeview'
-        )
-        
-        # Configure columns
-        self.proyectos_tree.heading('id', text='ID')
-        self.proyectos_tree.heading('titulo', text='Título')
-        self.proyectos_tree.heading('estado', text='Estado')
-        self.proyectos_tree.heading('fecha', text='Fecha')
-        self.proyectos_tree.heading('estudiantes', text='Estudiantes')
-        self.proyectos_tree.heading('acciones', text='Acciones')
-        
-        # Column widths
-        self.proyectos_tree.column('id', width=50)
-        self.proyectos_tree.column('titulo', width=300)
-        self.proyectos_tree.column('estado', width=100)
-        self.proyectos_tree.column('fecha', width=100)
-        self.proyectos_tree.column('estudiantes', width=100)
-        self.proyectos_tree.column('acciones', width=100)
-        
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self.proyectos_tree.yview)
-        self.proyectos_tree.configure(yscrollcommand=scrollbar.set)
-        
-        # Pack elements
-        self.proyectos_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-    def show_dashboard(self):
-        self.notebook.select(0)
-
-    def show_proyectos(self):
-        self.notebook.select(1)
-
-    def load_proyectos(self):
-        try:
-            self.proyectos_tree.delete(*self.proyectos_tree.get_children())
-            
-            query = """
-            SELECT p.id_proyecto, p.titulo, p.estado, p.fecha_creacion, 
-                   COUNT(pe.id_estudiante) as num_estudiantes
-            FROM proyectos p
-            LEFT JOIN proyecto_estudiantes pe ON p.id_proyecto = pe.id_proyecto
-            WHERE p.id_profesor_responsable = %s
-            GROUP BY p.id_proyecto
-            ORDER BY p.fecha_creacion DESC
-            """
-            proyectos = self.db.execute_query(query, (self.profesor_id,), fetch_all=True)
-            
-            for idx, proyecto in enumerate(proyectos, 1):
-                self.proyectos_tree.insert('', tk.END, text=str(idx), values=(
-                    proyecto['id_proyecto'],
-                    proyecto['titulo'],
-                    proyecto['estado'],
-                    proyecto['fecha_creacion'].strftime('%Y-%m-%d'),
-                    proyecto['num_estudiantes'],
-                    "✏️ 🗑️"
-                ))
-                
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudieron cargar los proyectos: {str(e)}")
-
-    def nuevo_proyecto(self):
-        ProyectoForm(self.app.root, self.db, self.usuario, self.load_proyectos)
 
     def logout(self):
         if messagebox.askokcancel("Cerrar Sesión", "¿Está seguro que desea cerrar sesión?"):
